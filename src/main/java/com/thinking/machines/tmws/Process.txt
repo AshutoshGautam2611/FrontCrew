@@ -1,0 +1,157 @@
+process
+--------
+String path=request.getPathInfo();
+ServletContext sc=getServletContext();
+DataModel dataModel=(DataModel)sc.getAttribute(DataModel.ID);
+ServiceModule serviceModule;
+serviceModule=dataModel.getServiceModule(path);
+if(serviceModule==null)
+{
+response.sendError(HttpServletResponse.SC_NOT_FOUND);
+return;
+}
+Service service=serviceModule.getService(path);
+String requestMethodType=request.getMethod();
+if(requestMethodType.equalsIgnoreCase("GET"))
+{
+if(service.isGetAllowed()==false)
+{
+response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED;
+return;
+}
+} else if(requestMethodType.equalsIgnoreCase("POST") )
+{
+if(service.isPostAllowed()==false)
+{
+response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED;
+return;
+}
+}
+//some more if conditions for other method types
+Object serviceModuleObject=serviceModule.getObject(servletContext,request,service);
+if(serviceModuleObject==null)
+{
+response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+return;
+}
+Object arguments[]=service.getArguments(servletContext,request);
+/* getArguments of service class will do the following
+1) Create array type object of size service.getParameters().length
+2) populate SessionParameters
+3) populate ApplicationParameters
+4) populate ContextDirectoryParameters
+5) populate CookieManager parameters
+6) populate AutoWiredParameters
+7) populate PropertyParameters
+8) The remaining parameters will be analyzed and will be
+handled accordingly
+*/
+Object result;
+try
+{
+Method method=service.getMethod();
+result=method.invoke(serviceModuleObject,arguments);
+
+
+
+}catch(InvocationTargetException invocationTargetException)
+{
+Throwable t=invocationTargetException.getCause();
+if(service.hasExceptionHandler())
+{
+if(service.isExceptionHandlerAService())
+{
+String prefix=request.getServletPath(); 
+request.getRequestDispatcher(prefix+service.getExceptionHandler()).forward(request,response);
+}
+else
+{
+request.getRequestDispatcher(service.getExceptionHandler()).forward(request,response);
+}
+return;
+}else
+{
+response.sendError(HttpServletResponse.SC_INTERNAL_ERROR);
+return;
+}
+}
+catch(IllegalAccessException illegalAccessException)
+{
+// this will never happen
+System.out.println("IllegalAccessException : "+illegalAccessException);
+response.sendError(HttpServletResponse.SC_INTERNAL_ERROR);
+return;
+}
+// Exception was not raised
+// letus resolve forwardTo scenario
+if(service.isForwarding())
+{
+String forwardTo=service.getForwardTo();
+if(fowardTo==null)
+{
+if(service.getReturnType().equals(void.class))
+{
+response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+return;
+}
+if(result==null)
+{
+response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+return;
+}
+forwardTo=result.toString();
+if(fowardTo==null)
+{
+response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+return;
+}
+} // service.forwardTo is null
+if(dataModel.containsPath(forwardTo)
+{
+// get url pattern in a variable named as prefix
+RequestDispatcher requestDispatcher;
+requestDispatcher=request.getRequestDispatcher(prefix+forwardTo);
+requestDispatcher.forward(request,response);
+return;
+}
+else
+{
+RequestDispatcher requestDispatcher;
+requestDispatcher=request.getRequestDispatcher(forwardTo);
+requestDispatcher.forward(request,response);
+return;
+}
+} // isForwarding ends
+PrintWriter pw=response.getWriter();
+if(service.getResponseType()==ResponseType.JSON)
+{
+response.setContenType("application/json");
+pw.print(new Gson().toJson(data));
+return;
+}
+if(service.getResponseType()==ResponseType.XML)
+{
+
+
+
+return;
+}
+if(service.getResponseType()==ResponseType.NONE)
+{
+
+
+return;
+}
+if(service.getResponseType()==ResponseType.HTML)
+{
+
+
+
+return;
+}
+if(service.getResponseType()==ResponseType.FILE)
+{
+
+
+return;
+}
